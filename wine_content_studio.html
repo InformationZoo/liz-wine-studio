@@ -1,0 +1,2575 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wine Content Studio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Noto Serif SC', serif;
+            background: #1a1a1a;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        /* 顶部控制栏 */
+        .control-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(26, 20, 18, 0.95);
+            border-bottom: 1px solid rgba(212, 175, 125, 0.2);
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-bar h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 24px;
+            color: #d4af7d;
+            margin-right: auto;
+        }
+
+        .control-btn {
+            padding: 10px 24px;
+            background: #d4af7d;
+            color: #1a1412;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(212, 175, 125, 0.3);
+        }
+
+        .control-btn.secondary {
+            background: transparent;
+            border: 1px solid #d4af7d;
+            color: #d4af7d;
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 模式切换 */
+        .mode-switcher {
+            display: flex;
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            padding: 3px;
+        }
+
+        .mode-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.6);
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .mode-btn:hover {
+            color: #fff;
+        }
+
+        .mode-btn.active {
+            background: #d4af7d;
+            color: #1a1412;
+            font-weight: 600;
+        }
+
+        /* 主内容区 */
+        .main-content {
+            display: flex;
+            margin-top: 70px;
+            min-height: calc(100vh - 70px);
+        }
+
+        /* 左侧面板 */
+        .left-panel {
+            width: 350px;
+            background: rgba(26, 20, 18, 0.8);
+            border-right: 1px solid rgba(212, 175, 125, 0.1);
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(100vh - 70px);
+        }
+
+        .panel-section {
+            margin-bottom: 25px;
+        }
+
+        .panel-title {
+            font-size: 12px;
+            color: #d4af7d;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(212, 175, 125, 0.2);
+        }
+
+        /* 文件上传区 */
+        .upload-zone {
+            border: 2px dashed rgba(212, 175, 125, 0.3);
+            border-radius: 8px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-zone:hover {
+            border-color: #d4af7d;
+            background: rgba(212, 175, 125, 0.05);
+        }
+
+        .upload-zone svg {
+            width: 40px;
+            height: 40px;
+            color: #d4af7d;
+            margin-bottom: 10px;
+        }
+
+        .upload-zone p {
+            color: rgba(255,255,255,0.6);
+            font-size: 13px;
+        }
+
+        /* 酒款列表 */
+        .wine-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .wine-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .wine-item:hover {
+            background: rgba(212, 175, 125, 0.1);
+        }
+
+        .wine-item.selected {
+            background: rgba(212, 175, 125, 0.15);
+            border: 1px solid rgba(212, 175, 125, 0.3);
+        }
+
+        .wine-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(212, 175, 125, 0.5);
+            border-radius: 4px;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .wine-item.selected .wine-checkbox {
+            background: #d4af7d;
+            border-color: #d4af7d;
+        }
+
+        .wine-checkbox svg {
+            width: 12px;
+            height: 12px;
+            color: #1a1412;
+            opacity: 0;
+        }
+
+        .wine-item.selected .wine-checkbox svg {
+            opacity: 1;
+        }
+
+        .wine-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .wine-info .name {
+            font-size: 14px;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .wine-info .producer {
+            font-size: 11px;
+            color: rgba(255,255,255,0.5);
+            margin-top: 2px;
+        }
+
+        .wine-score {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 18px;
+            color: #d4af7d;
+            font-weight: 700;
+        }
+
+        /* 设置项 */
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .setting-label {
+            font-size: 13px;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .setting-select {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(212, 175, 125, 0.3);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        /* 右侧预览区 */
+        .preview-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            background: #0d0a08;
+        }
+
+        .preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .preview-title {
+            font-size: 16px;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .slide-counter {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 14px;
+            color: #d4af7d;
+        }
+
+        /* 幻灯片容器 */
+        .slides-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* 单张幻灯片 */
+        .slide {
+            width: 100%;
+            max-width: 960px;
+            aspect-ratio: 16/9;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1412 0%, #0d0a08 100%);
+            border-radius: 4px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            margin: 0 auto;
+        }
+
+        .slide.light {
+            background: linear-gradient(180deg, #faf8f5 0%, #f5f2ed 50%, #efe9e1 100%);
+        }
+
+        /* 幻灯片内容样式 */
+        .slide .slide-content {
+            width: 100%;
+            height: 100%;
+            padding: 4%;
+            display: flex;
+        }
+
+        /* 封面幻灯片 */
+        .slide.cover .slide-content {
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .slide .brand-badge {
+            font-size: clamp(8px, 1vw, 12px);
+            color: #d4af7d;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+
+        .slide .main-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(24px, 4vw, 48px);
+            color: #fff;
+            font-weight: 600;
+            letter-spacing: 4px;
+            margin-bottom: 10px;
+        }
+
+        .slide.light .main-title {
+            color: #2c2416;
+        }
+
+        .slide .sub-title {
+            font-size: clamp(14px, 2vw, 24px);
+            color: rgba(255,255,255,0.7);
+            letter-spacing: 6px;
+            margin-bottom: 30px;
+        }
+
+        .slide.light .sub-title {
+            color: #5a4d3a;
+        }
+
+        .slide .decorative-line {
+            width: 100px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #d4af7d, transparent);
+            margin: 20px 0;
+        }
+
+        .slide .tagline {
+            font-size: clamp(10px, 1.2vw, 14px);
+            color: rgba(212, 175, 125, 0.8);
+            letter-spacing: 3px;
+        }
+
+        /* 酒款幻灯片 */
+        .slide.wine .slide-content {
+            gap: 5%;
+        }
+
+        .slide .wine-image-section {
+            flex: 0 0 35%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .slide .wine-image {
+            max-height: 80%;
+            max-width: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 15px 30px rgba(0,0,0,0.5));
+        }
+
+        .slide .wine-details {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .slide .classification {
+            display: inline-block;
+            background: linear-gradient(135deg, #d4af7d 0%, #b8956a 100%);
+            color: #1a1412;
+            padding: 4px 12px;
+            font-size: clamp(8px, 0.8vw, 11px);
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            width: fit-content;
+        }
+
+        .slide .wine-name-en {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(18px, 2.5vw, 32px);
+            color: #fff;
+            font-weight: 600;
+            letter-spacing: 1px;
+            line-height: 1.2;
+            margin-bottom: 5px;
+        }
+
+        .slide.light .wine-name-en {
+            color: #2c2416;
+        }
+
+        .slide .wine-name-cn {
+            font-size: clamp(12px, 1.5vw, 18px);
+            color: rgba(255,255,255,0.7);
+            letter-spacing: 4px;
+            margin-bottom: 20px;
+        }
+
+        .slide.light .wine-name-cn {
+            color: #5a4d3a;
+        }
+
+        .slide .specs {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(212, 175, 125, 0.2);
+        }
+
+        .slide .spec {
+            text-align: center;
+        }
+
+        .slide .spec-value {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(16px, 2vw, 24px);
+            color: #d4af7d;
+            font-weight: 700;
+        }
+
+        .slide .spec-label {
+            font-size: clamp(8px, 0.7vw, 10px);
+            color: rgba(212, 175, 125, 0.6);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .slide .tasting-notes {
+            margin-bottom: 15px;
+        }
+
+        .slide .tasting-title {
+            font-size: clamp(9px, 0.8vw, 11px);
+            color: #d4af7d;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .slide .tasting-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .slide .tasting-item {
+            display: flex;
+            gap: 8px;
+            font-size: clamp(9px, 0.9vw, 12px);
+        }
+
+        .slide .tasting-label {
+            color: rgba(212, 175, 125, 0.6);
+            min-width: 35px;
+        }
+
+        .slide .tasting-value {
+            color: rgba(255,255,255,0.85);
+        }
+
+        .slide.light .tasting-value {
+            color: #3d3426;
+        }
+
+        .slide .pairing {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slide .pairing-label {
+            font-size: clamp(8px, 0.7vw, 10px);
+            color: rgba(212, 175, 125, 0.6);
+            letter-spacing: 1px;
+        }
+
+        .slide .pairing-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .slide .pairing-tag {
+            font-size: clamp(9px, 0.8vw, 11px);
+            color: rgba(255,255,255,0.8);
+            padding: 3px 10px;
+            background: rgba(212, 175, 125, 0.1);
+        }
+
+        .slide.light .pairing-tag {
+            color: #4a3f2f;
+            background: rgba(139, 115, 85, 0.1);
+        }
+
+        /* 页码 */
+        .slide .page-num {
+            position: absolute;
+            bottom: 15px;
+            right: 25px;
+            font-size: clamp(9px, 0.8vw, 11px);
+            color: rgba(212, 175, 125, 0.5);
+            letter-spacing: 1px;
+        }
+
+        /* 装饰角 */
+        .slide .corner {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-color: #d4af7d;
+            border-style: solid;
+            border-width: 0;
+        }
+
+        .slide .corner.tl { top: 15px; left: 15px; border-top-width: 1px; border-left-width: 1px; }
+        .slide .corner.tr { top: 15px; right: 15px; border-top-width: 1px; border-right-width: 1px; }
+        .slide .corner.bl { bottom: 15px; left: 15px; border-bottom-width: 1px; border-left-width: 1px; }
+        .slide .corner.br { bottom: 15px; right: 15px; border-bottom-width: 1px; border-right-width: 1px; }
+
+        /* 纹理 */
+        .slide .texture {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+
+        /* 索引页 */
+        .slide.index .slide-content {
+            flex-direction: column;
+        }
+
+        .slide .index-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .slide .index-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(20px, 2.5vw, 36px);
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .slide.light .index-title {
+            color: #2c2416;
+        }
+
+        .slide .index-subtitle {
+            font-size: clamp(10px, 1vw, 14px);
+            color: rgba(212, 175, 125, 0.7);
+            letter-spacing: 3px;
+        }
+
+        .slide .index-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            flex: 1;
+        }
+
+        .slide .index-card {
+            background: rgba(255,255,255,0.03);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .slide.light .index-card {
+            background: rgba(139, 115, 85, 0.05);
+        }
+
+        .slide .index-card-img {
+            width: 40px;
+            height: 100px;
+            object-fit: contain;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+
+        .slide .index-card-name {
+            font-size: clamp(9px, 1vw, 12px);
+            color: #fff;
+            margin-bottom: 5px;
+        }
+
+        .slide.light .index-card-name {
+            color: #2c2416;
+        }
+
+        .slide .index-card-class {
+            font-size: clamp(8px, 0.7vw, 10px);
+            color: #d4af7d;
+            letter-spacing: 1px;
+        }
+
+        .slide .index-card-score {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(14px, 1.5vw, 20px);
+            color: #d4af7d;
+            font-weight: 700;
+            margin-top: 5px;
+        }
+
+        /* 加载遮罩 */
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-text {
+            color: #d4af7d;
+            font-size: 16px;
+            letter-spacing: 2px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(212, 175, 125, 0.3);
+            border-top-color: #d4af7d;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            color: rgba(212, 175, 125, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 900px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .left-panel {
+                width: 100%;
+                max-height: 50vh;
+            }
+        }
+
+        /* ========== 海报样式 ========== */
+
+        /* ========== 方形海报 1:1 (参考 wine_poster_light) ========== */
+        .poster-square {
+            width: 100%;
+            max-width: 600px;
+            aspect-ratio: 1/1;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(180deg, #1a1412 0%, #0d0a08 100%);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .poster-square.light {
+            background: linear-gradient(180deg, #faf8f5 0%, #f5f2ed 50%, #efe9e1 100%);
+        }
+
+        .poster-square .poster-top-accent {
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #d4af7d, #b8956a, #d4af7d, transparent);
+        }
+
+        .poster-square.light .poster-top-accent {
+            background: linear-gradient(90deg, transparent, #8b7355, #6b5344, #8b7355, transparent);
+        }
+
+        .poster-square .poster-border-frame {
+            position: absolute;
+            top: 12px; left: 12px; right: 12px; bottom: 12px;
+            border: 1px solid rgba(212, 175, 125, 0.15);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .poster-square.light .poster-border-frame {
+            border-color: rgba(139, 115, 85, 0.15);
+        }
+
+        .poster-square .poster-corner-badge {
+            position: absolute;
+            top: 18px;
+            right: 24px;
+            font-size: clamp(8px, 1vw, 10px);
+            color: rgba(212, 175, 125, 0.7);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            z-index: 11;
+        }
+
+        .poster-square.light .poster-corner-badge {
+            color: rgba(139, 115, 85, 0.7);
+        }
+
+        .poster-square .poster-main-content {
+            flex: 1;
+            padding: 5%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .poster-square .poster-header {
+            text-align: center;
+            margin-bottom: 3%;
+        }
+
+        .poster-square .poster-producer-name {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(10px, 1.5vw, 14px);
+            color: #d4af7d;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .poster-square.light .poster-producer-name {
+            color: #8b7355;
+        }
+
+        .poster-square .poster-wine-name {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(22px, 4vw, 36px);
+            color: #fff;
+            font-weight: 600;
+            letter-spacing: 2px;
+            line-height: 1.15;
+            margin-bottom: 5px;
+        }
+
+        .poster-square.light .poster-wine-name {
+            color: #2c2416;
+        }
+
+        .poster-square .poster-wine-name-cn {
+            font-size: clamp(12px, 2vw, 18px);
+            color: rgba(255,255,255,0.6);
+            letter-spacing: 4px;
+        }
+
+        .poster-square.light .poster-wine-name-cn {
+            color: #5a4d3a;
+        }
+
+        .poster-square .poster-body {
+            flex: 1;
+            display: flex;
+            gap: 25px;
+            align-items: center;
+        }
+
+        .poster-square .poster-bottle-section {
+            flex: 0 0 35%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .poster-square .poster-bottle-glow {
+            position: absolute;
+            width: 150px;
+            height: 280px;
+            background: radial-gradient(ellipse, rgba(212, 175, 125, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .poster-square.light .poster-bottle-glow {
+            background: radial-gradient(ellipse, rgba(139, 115, 85, 0.08) 0%, transparent 70%);
+        }
+
+        .poster-square .poster-image {
+            max-height: 280px;
+            max-width: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 12px 30px rgba(0,0,0,0.4));
+            position: relative;
+            z-index: 1;
+            cursor: pointer;
+        }
+
+        .poster-square.light .poster-image {
+            filter: drop-shadow(0 12px 30px rgba(0,0,0,0.12));
+        }
+
+        .poster-square .poster-info-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .poster-square .poster-score-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(212, 175, 125, 0.2);
+        }
+
+        .poster-square.light .poster-score-row {
+            border-color: rgba(139, 115, 85, 0.2);
+        }
+
+        .poster-square .poster-score-main {
+            display: flex;
+            align-items: baseline;
+            gap: 5px;
+        }
+
+        .poster-square .poster-score-number {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(36px, 6vw, 52px);
+            color: #d4af7d;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .poster-square.light .poster-score-number {
+            color: #6b5344;
+        }
+
+        .poster-square .poster-score-label {
+            font-size: clamp(10px, 1.2vw, 12px);
+            color: rgba(212, 175, 125, 0.6);
+            letter-spacing: 1px;
+        }
+
+        .poster-square.light .poster-score-label {
+            color: rgba(139, 115, 85, 0.7);
+        }
+
+        .poster-square .poster-score-details {
+            display: flex;
+            gap: 18px;
+        }
+
+        .poster-square .poster-detail-item {
+            text-align: center;
+        }
+
+        .poster-square .poster-detail-value {
+            font-size: clamp(11px, 1.3vw, 14px);
+            color: #fff;
+            margin-bottom: 2px;
+        }
+
+        .poster-square.light .poster-detail-value {
+            color: #3d3426;
+        }
+
+        .poster-square .poster-detail-label {
+            font-size: clamp(7px, 0.8vw, 9px);
+            color: rgba(212, 175, 125, 0.5);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .poster-square.light .poster-detail-label {
+            color: rgba(139, 115, 85, 0.6);
+        }
+
+        .poster-square .poster-terroir-box {
+            background: rgba(212, 175, 125, 0.06);
+            padding: 12px 15px;
+            border-left: 3px solid #d4af7d;
+        }
+
+        .poster-square.light .poster-terroir-box {
+            background: rgba(139, 115, 85, 0.06);
+            border-color: #8b7355;
+        }
+
+        .poster-square .poster-terroir-title {
+            font-size: clamp(8px, 1vw, 10px);
+            color: #d4af7d;
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .poster-square.light .poster-terroir-title {
+            color: #6b5344;
+        }
+
+        .poster-square .poster-terroir-text {
+            font-size: clamp(9px, 1.1vw, 12px);
+            color: rgba(255,255,255,0.8);
+            line-height: 1.6;
+        }
+
+        .poster-square.light .poster-terroir-text {
+            color: #4a3f2f;
+        }
+
+        .poster-square .poster-tasting-block {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .poster-square .poster-tasting-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .poster-square .poster-tasting-label {
+            flex: 0 0 45px;
+            font-size: clamp(8px, 0.9vw, 10px);
+            color: rgba(212, 175, 125, 0.6);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding-top: 1px;
+        }
+
+        .poster-square.light .poster-tasting-label {
+            color: rgba(139, 115, 85, 0.7);
+        }
+
+        .poster-square .poster-tasting-value {
+            flex: 1;
+            font-size: clamp(9px, 1.1vw, 12px);
+            color: rgba(255,255,255,0.85);
+            line-height: 1.5;
+        }
+
+        .poster-square.light .poster-tasting-value {
+            color: #3d3426;
+        }
+
+        .poster-square .poster-extra-info {
+            display: flex;
+            gap: 20px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(212, 175, 125, 0.2);
+        }
+
+        .poster-square.light .poster-extra-info {
+            border-color: rgba(139, 115, 85, 0.2);
+        }
+
+        .poster-square .poster-pairing-block {
+            flex: 1;
+        }
+
+        .poster-square .poster-extra-title {
+            font-size: clamp(8px, 0.9vw, 10px);
+            color: rgba(212, 175, 125, 0.55);
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .poster-square.light .poster-extra-title {
+            color: rgba(139, 115, 85, 0.65);
+        }
+
+        .poster-square .poster-pairing-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .poster-square .poster-pairing-tag {
+            font-size: clamp(9px, 1vw, 11px);
+            color: rgba(255,255,255,0.8);
+            padding: 4px 10px;
+            background: rgba(212, 175, 125, 0.12);
+            letter-spacing: 1px;
+        }
+
+        .poster-square.light .poster-pairing-tag {
+            color: #4a3f2f;
+            background: rgba(139, 115, 85, 0.1);
+        }
+
+        .poster-square .poster-serving-block {
+            display: flex;
+            gap: 15px;
+        }
+
+        .poster-square .poster-serving-item {
+            text-align: center;
+        }
+
+        .poster-square .poster-serving-value {
+            font-size: clamp(10px, 1.1vw, 12px);
+            color: #fff;
+            margin-bottom: 2px;
+        }
+
+        .poster-square.light .poster-serving-value {
+            color: #3d3426;
+        }
+
+        .poster-square .poster-serving-label {
+            font-size: clamp(7px, 0.7vw, 8px);
+            color: rgba(212, 175, 125, 0.5);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .poster-square.light .poster-serving-label {
+            color: rgba(139, 115, 85, 0.6);
+        }
+
+        .poster-square .poster-bottom-accent {
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #d4af7d, #b8956a, #d4af7d, transparent);
+        }
+
+        .poster-square.light .poster-bottom-accent {
+            background: linear-gradient(90deg, transparent, #8b7355, #6b5344, #8b7355, transparent);
+        }
+
+        /* ========== 竖版海报 9:16 ========== */
+        .poster-portrait {
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 9/16;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(180deg, #1a1412 0%, #0d0a08 100%);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .poster-portrait.light {
+            background: linear-gradient(180deg, #faf8f5 0%, #f5f2ed 50%, #efe9e1 100%);
+        }
+
+        .poster-portrait .poster-top-accent {
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #d4af7d, #b8956a, #d4af7d, transparent);
+        }
+
+        .poster-portrait.light .poster-top-accent {
+            background: linear-gradient(90deg, transparent, #8b7355, #6b5344, #8b7355, transparent);
+        }
+
+        .poster-portrait .poster-border-frame {
+            position: absolute;
+            top: 10px; left: 10px; right: 10px; bottom: 10px;
+            border: 1px solid rgba(212, 175, 125, 0.15);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .poster-portrait.light .poster-border-frame {
+            border-color: rgba(139, 115, 85, 0.15);
+        }
+
+        .poster-portrait .poster-corner-badge {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            font-size: clamp(7px, 0.9vw, 9px);
+            color: rgba(212, 175, 125, 0.7);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            z-index: 11;
+        }
+
+        .poster-portrait.light .poster-corner-badge {
+            color: rgba(139, 115, 85, 0.7);
+        }
+
+        .poster-portrait .poster-main-content {
+            flex: 1;
+            padding: 4%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .poster-portrait .poster-header {
+            text-align: center;
+            margin-bottom: 3%;
+            padding-top: 2%;
+        }
+
+        .poster-portrait .poster-producer-name {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(9px, 1.3vw, 12px);
+            color: #d4af7d;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .poster-portrait.light .poster-producer-name {
+            color: #8b7355;
+        }
+
+        .poster-portrait .poster-wine-name {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(18px, 3.5vw, 28px);
+            color: #fff;
+            font-weight: 600;
+            letter-spacing: 1px;
+            line-height: 1.15;
+            margin-bottom: 4px;
+        }
+
+        .poster-portrait.light .poster-wine-name {
+            color: #2c2416;
+        }
+
+        .poster-portrait .poster-wine-name-cn {
+            font-size: clamp(10px, 1.6vw, 14px);
+            color: rgba(255,255,255,0.6);
+            letter-spacing: 3px;
+        }
+
+        .poster-portrait.light .poster-wine-name-cn {
+            color: #5a4d3a;
+        }
+
+        .poster-portrait .poster-bottle-section {
+            flex: 0 0 35%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin: 3% 0;
+        }
+
+        .poster-portrait .poster-bottle-glow {
+            position: absolute;
+            width: 120px;
+            height: 240px;
+            background: radial-gradient(ellipse, rgba(212, 175, 125, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .poster-portrait.light .poster-bottle-glow {
+            background: radial-gradient(ellipse, rgba(139, 115, 85, 0.08) 0%, transparent 70%);
+        }
+
+        .poster-portrait .poster-image {
+            max-height: 220px;
+            max-width: 35%;
+            object-fit: contain;
+            filter: drop-shadow(0 10px 25px rgba(0,0,0,0.4));
+            position: relative;
+            z-index: 1;
+            cursor: pointer;
+        }
+
+        .poster-portrait.light .poster-image {
+            filter: drop-shadow(0 10px 25px rgba(0,0,0,0.12));
+        }
+
+        .poster-portrait .poster-score-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 3%;
+            background: rgba(212, 175, 125, 0.05);
+            margin-bottom: 3%;
+        }
+
+        .poster-portrait.light .poster-score-row {
+            background: rgba(139, 115, 85, 0.05);
+        }
+
+        .poster-portrait .poster-score-main {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+
+        .poster-portrait .poster-score-number {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(28px, 5vw, 42px);
+            color: #d4af7d;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .poster-portrait.light .poster-score-number {
+            color: #6b5344;
+        }
+
+        .poster-portrait .poster-score-label {
+            font-size: clamp(9px, 1vw, 11px);
+            color: rgba(212, 175, 125, 0.6);
+        }
+
+        .poster-portrait.light .poster-score-label {
+            color: rgba(139, 115, 85, 0.7);
+        }
+
+        .poster-portrait .poster-score-details {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .poster-portrait .poster-detail-item {
+            text-align: center;
+        }
+
+        .poster-portrait .poster-detail-value {
+            font-size: clamp(10px, 1.2vw, 12px);
+            color: #fff;
+            margin-bottom: 1px;
+        }
+
+        .poster-portrait.light .poster-detail-value {
+            color: #3d3426;
+        }
+
+        .poster-portrait .poster-detail-label {
+            font-size: clamp(6px, 0.7vw, 8px);
+            color: rgba(212, 175, 125, 0.5);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .poster-portrait.light .poster-detail-label {
+            color: rgba(139, 115, 85, 0.6);
+        }
+
+        .poster-portrait .poster-info-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .poster-portrait .poster-terroir-box {
+            background: rgba(212, 175, 125, 0.06);
+            padding: 10px 12px;
+            border-left: 2px solid #d4af7d;
+        }
+
+        .poster-portrait.light .poster-terroir-box {
+            background: rgba(139, 115, 85, 0.06);
+            border-color: #8b7355;
+        }
+
+        .poster-portrait .poster-terroir-title {
+            font-size: clamp(7px, 0.9vw, 9px);
+            color: #d4af7d;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .poster-portrait.light .poster-terroir-title {
+            color: #6b5344;
+        }
+
+        .poster-portrait .poster-terroir-text {
+            font-size: clamp(8px, 1vw, 10px);
+            color: rgba(255,255,255,0.8);
+            line-height: 1.55;
+        }
+
+        .poster-portrait.light .poster-terroir-text {
+            color: #4a3f2f;
+        }
+
+        .poster-portrait .poster-tasting-block {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .poster-portrait .poster-tasting-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .poster-portrait .poster-tasting-label {
+            flex: 0 0 38px;
+            font-size: clamp(7px, 0.8vw, 9px);
+            color: rgba(212, 175, 125, 0.6);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding-top: 1px;
+        }
+
+        .poster-portrait.light .poster-tasting-label {
+            color: rgba(139, 115, 85, 0.7);
+        }
+
+        .poster-portrait .poster-tasting-value {
+            flex: 1;
+            font-size: clamp(8px, 1vw, 10px);
+            color: rgba(255,255,255,0.85);
+            line-height: 1.45;
+        }
+
+        .poster-portrait.light .poster-tasting-value {
+            color: #3d3426;
+        }
+
+        .poster-portrait .poster-extra-info {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(212, 175, 125, 0.2);
+            margin-top: auto;
+        }
+
+        .poster-portrait.light .poster-extra-info {
+            border-color: rgba(139, 115, 85, 0.2);
+        }
+
+        .poster-portrait .poster-pairing-block {
+            flex: 1;
+        }
+
+        .poster-portrait .poster-extra-title {
+            font-size: clamp(7px, 0.8vw, 9px);
+            color: rgba(212, 175, 125, 0.55);
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .poster-portrait.light .poster-extra-title {
+            color: rgba(139, 115, 85, 0.65);
+        }
+
+        .poster-portrait .poster-pairing-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .poster-portrait .poster-pairing-tag {
+            font-size: clamp(8px, 0.9vw, 10px);
+            color: rgba(255,255,255,0.8);
+            padding: 3px 8px;
+            background: rgba(212, 175, 125, 0.12);
+            letter-spacing: 1px;
+        }
+
+        .poster-portrait.light .poster-pairing-tag {
+            color: #4a3f2f;
+            background: rgba(139, 115, 85, 0.1);
+        }
+
+        .poster-portrait .poster-serving-row {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 8px;
+        }
+
+        .poster-portrait .poster-serving-item {
+            text-align: center;
+        }
+
+        .poster-portrait .poster-serving-value {
+            font-size: clamp(9px, 1vw, 11px);
+            color: #fff;
+            margin-bottom: 2px;
+        }
+
+        .poster-portrait.light .poster-serving-value {
+            color: #3d3426;
+        }
+
+        .poster-portrait .poster-serving-label {
+            font-size: clamp(6px, 0.65vw, 7px);
+            color: rgba(212, 175, 125, 0.5);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .poster-portrait.light .poster-serving-label {
+            color: rgba(139, 115, 85, 0.6);
+        }
+
+        .poster-portrait .poster-brand-footer {
+            text-align: center;
+            padding: 10px 0 5px;
+            font-size: clamp(7px, 0.8vw, 9px);
+            color: rgba(212, 175, 125, 0.5);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .poster-portrait.light .poster-brand-footer {
+            color: rgba(139, 115, 85, 0.5);
+        }
+
+        .poster-portrait .poster-bottom-accent {
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #d4af7d, #b8956a, #d4af7d, transparent);
+        }
+
+        .poster-portrait.light .poster-bottom-accent {
+            background: linear-gradient(90deg, transparent, #8b7355, #6b5344, #8b7355, transparent);
+        }
+
+        .poster-portrait.light .poster-tasting {
+            color: #3d3426;
+        }
+
+        .poster-portrait .poster-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .poster-portrait .poster-producer {
+            font-size: clamp(9px, 1.1vw, 12px);
+            color: rgba(255,255,255,0.6);
+        }
+
+        .poster-portrait.light .poster-producer {
+            color: #5a4d3a;
+        }
+
+        .poster-portrait .poster-brand {
+            font-size: clamp(7px, 0.9vw, 10px);
+            color: rgba(212, 175, 125, 0.6);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* 海报纹理和装饰 */
+        .poster-square .texture,
+        .poster-portrait .texture {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+
+        .poster-square .corner,
+        .poster-portrait .corner {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-color: #d4af7d;
+            border-style: solid;
+            border-width: 0;
+            z-index: 2;
+        }
+
+        .poster-square .corner.tl, .poster-portrait .corner.tl { top: 12px; left: 12px; border-top-width: 1px; border-left-width: 1px; }
+        .poster-square .corner.tr, .poster-portrait .corner.tr { top: 12px; right: 12px; border-top-width: 1px; border-right-width: 1px; }
+        .poster-square .corner.bl, .poster-portrait .corner.bl { bottom: 12px; left: 12px; border-bottom-width: 1px; border-left-width: 1px; }
+        .poster-square .corner.br, .poster-portrait .corner.br { bottom: 12px; right: 12px; border-bottom-width: 1px; border-right-width: 1px; }
+    </style>
+</head>
+<body>
+    <!-- 顶部控制栏 -->
+    <div class="control-bar">
+        <h1>Wine Content Studio</h1>
+        <div class="mode-switcher">
+            <button class="mode-btn active" data-mode="ppt" onclick="setMode('ppt')">PPT 16:9</button>
+            <button class="mode-btn" data-mode="square" onclick="setMode('square')">方形 1:1</button>
+            <button class="mode-btn" data-mode="portrait" onclick="setMode('portrait')">竖版 9:16</button>
+        </div>
+        <button class="control-btn secondary" onclick="selectAll()">全选</button>
+        <button class="control-btn secondary" onclick="clearSelection()">清空</button>
+        <button class="control-btn secondary" onclick="generatePreview()">生成预览</button>
+        <button class="control-btn secondary" onclick="generateWineCard()">生成酒单</button>
+        <button class="control-btn" onclick="downloadOutput()" id="downloadBtn" disabled>下载</button>
+    </div>
+
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loadingText">正在处理...</div>
+    </div>
+
+    <!-- 主内容 -->
+    <div class="main-content">
+        <!-- 左侧面板 -->
+        <div class="left-panel">
+            <!-- 上传区 -->
+            <div class="panel-section">
+                <div class="panel-title">数据源</div>
+                <div class="upload-zone" onclick="document.getElementById('jsonInput').click()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                    </svg>
+                    <p>点击上传JSON文件<br>或使用示例数据</p>
+                </div>
+                <input type="file" id="jsonInput" accept=".json" style="display:none" onchange="loadJSON(event)">
+            </div>
+
+            <!-- 酒款列表 -->
+            <div class="panel-section">
+                <div class="panel-title">酒款清单</div>
+                <div class="wine-list" id="wineList">
+                    <!-- 动态生成 -->
+                </div>
+            </div>
+
+            <!-- 设置 -->
+            <div class="panel-section">
+                <div class="panel-title">设置</div>
+                <div class="setting-row">
+                    <span class="setting-label">主题风格</span>
+                    <select class="setting-select" id="themeSelect">
+                        <option value="dark">深色优雅</option>
+                        <option value="light">浅色清新</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <span class="setting-label">封面标题</span>
+                    <input type="text" class="setting-select" id="coverTitle" value="精选酒款" style="width:120px">
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧预览 -->
+        <div class="preview-area">
+            <div class="preview-header">
+                <span class="preview-title">幻灯片预览</span>
+                <span class="slide-counter" id="slideCounter">0 页</span>
+            </div>
+            <div class="slides-container" id="slidesContainer">
+                <div class="empty-state" id="emptyState">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/>
+                        <line x1="12" y1="17" x2="12" y2="21"/>
+                    </svg>
+                    <p>选择酒款后点击"生成预览"</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 示例数据 - 5款经典勃艮第名酒
+        const sampleWines = [
+            {
+                id: 1,
+                name_cn: "罗曼尼·康帝特级园",
+                name_en: "Romanée-Conti Grand Cru",
+                producer: "Domaine de la Romanée-Conti",
+                producer_cn: "罗曼尼·康帝酒庄",
+                classification: "Grand Cru",
+                score: 99,
+                abv: "13%",
+                grape: "Pinot Noir",
+                vintage: "2019",
+                aging: "20-30年",
+                image: "",
+                terroir: "勃艮第最传奇的1.81公顷独占园，位于沃恩-罗曼尼村。古老的石灰岩土壤赋予酒款无与伦比的优雅与复杂度。",
+                serving_temp: "15-16°C",
+                decanter: "醒酒2-3小时",
+                tasting: {
+                    appearance: "深邃的红宝石色，泛着石榴红光泽",
+                    nose: "玫瑰花瓣、紫罗兰、黑樱桃、松露、香料",
+                    palate: "丝绸般质感，层次极为复杂，完美平衡",
+                    finish: "极长，矿物感与花香交织不绝"
+                },
+                pairing: ["松露料理", "烤乳鸽", "陈年奶酪"],
+                price: 188000
+            },
+            {
+                id: 2,
+                name_cn: "香贝丹特级园",
+                name_en: "Chambertin Grand Cru",
+                producer: "Domaine Armand Rousseau",
+                producer_cn: "阿曼·卢梭酒庄",
+                classification: "Grand Cru",
+                score: 98,
+                abv: "13.5%",
+                grape: "Pinot Noir",
+                vintage: "2018",
+                aging: "15-25年",
+                image: "",
+                terroir: "热夫雷-香贝丹村最负盛名的特级园，泥灰岩与石灰岩土壤，赋予酒款强大的结构感与深沉的果味。",
+                serving_temp: "16-17°C",
+                decanter: "醒酒2小时",
+                tasting: {
+                    appearance: "深紫红色，边缘泛着石榴红",
+                    nose: "黑莓、黑樱桃、烟熏、森林地表、甘草",
+                    palate: "雄浑有力，单宁紧致而成熟，结构宏大",
+                    finish: "极长，带有矿物与黑色水果的回甘"
+                },
+                pairing: ["红酒炖牛肉", "野味", "烤羊排"],
+                price: 48000
+            },
+            {
+                id: 3,
+                name_cn: "骑士-蒙哈榭特级园",
+                name_en: "Chevalier-Montrachet Grand Cru",
+                producer: "Domaine Leflaive",
+                producer_cn: "莱弗莱酒庄",
+                classification: "Grand Cru",
+                score: 97,
+                abv: "13.5%",
+                grape: "Chardonnay",
+                vintage: "2020",
+                aging: "10-20年",
+                image: "",
+                terroir: "普利尼-蒙哈榭村海拔最高的特级园，贫瘠的石灰岩土壤，产出的白葡萄酒矿物感最为纯粹。",
+                serving_temp: "12-14°C",
+                decanter: "无需醒酒",
+                tasting: {
+                    appearance: "明亮的金黄色，泛着绿色光泽",
+                    nose: "白花、柑橘、烤杏仁、燧石、蜂蜜",
+                    palate: "纯净通透，酸度精准，矿物感突出",
+                    finish: "极长，咸鲜矿物感与柑橘回味"
+                },
+                pairing: ["龙虾", "扇贝", "白松露意面"],
+                price: 16800
+            },
+            {
+                id: 4,
+                name_cn: "默尔索一级园佩里耶",
+                name_en: "Meursault Perrières 1er Cru",
+                producer: "Domaine Coche-Dury",
+                producer_cn: "科什-杜丽酒庄",
+                classification: "Premier Cru",
+                score: 96,
+                abv: "13%",
+                grape: "Chardonnay",
+                vintage: "2019",
+                aging: "8-15年",
+                image: "",
+                terroir: "默尔索村最出色的一级园，'Perrières'意为采石场，石灰岩碎石土壤赋予酒款独特的矿物感与力量。",
+                serving_temp: "12-13°C",
+                decanter: "醒酒30分钟",
+                tasting: {
+                    appearance: "金黄色，闪烁着琥珀色光芒",
+                    nose: "烤榛子、黄油、白桃、柑橘皮、矿石",
+                    palate: "丰腴饱满却不失清新，酸度活泼",
+                    finish: "悠长，坚果与矿物感层层展开"
+                },
+                pairing: ["烤鸡", "小牛肉", "奶油蘑菇"],
+                price: 12800
+            },
+            {
+                id: 5,
+                name_cn: "沃恩-罗曼尼一级园克罗帕宏图",
+                name_en: "Vosne-Romanée Cros Parantoux 1er Cru",
+                producer: "Domaine Méo-Camuzet",
+                producer_cn: "梅奥-卡慕泽酒庄",
+                classification: "Premier Cru",
+                score: 95,
+                abv: "13.5%",
+                grape: "Pinot Noir",
+                vintage: "2019",
+                aging: "10-18年",
+                image: "",
+                terroir: "由亨利·贾耶开垦的传奇一级园，位于李其堡特级园上方，土壤富含石灰岩与铁质。",
+                serving_temp: "15-16°C",
+                decanter: "醒酒1.5小时",
+                tasting: {
+                    appearance: "明亮的红宝石色",
+                    nose: "红樱桃、覆盆子、紫罗兰、香料、新橡木",
+                    palate: "精致优雅，丝滑单宁，果味纯净",
+                    finish: "悠长，带有香料与红色水果的余韵"
+                },
+                pairing: ["烤鸭", "蘑菇料理", "烤雉鸡"],
+                price: 8500
+            }
+        ];
+
+        let wines = [];
+        let selectedWines = [];
+        let generatedSlides = [];
+        let currentMode = 'ppt'; // 'ppt', 'square', 'portrait'
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            wines = [...sampleWines];
+            renderWineList();
+        });
+
+        // 切换模式
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+            // 更新预览标题
+            const titles = {
+                'ppt': '幻灯片预览',
+                'square': '方形海报预览 (1:1)',
+                'portrait': '竖版海报预览 (9:16)'
+            };
+            document.querySelector('.preview-title').textContent = titles[mode];
+            // 清空预览
+            if (generatedSlides.length > 0) {
+                generatePreview();
+            }
+        }
+
+        // 渲染酒款列表
+        function renderWineList() {
+            const container = document.getElementById('wineList');
+            container.innerHTML = wines.map(wine => `
+                <div class="wine-item ${selectedWines.includes(wine.id) ? 'selected' : ''}"
+                     onclick="toggleWine(${wine.id})">
+                    <div class="wine-checkbox">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                            <path d="M20 6L9 17l-5-5"/>
+                        </svg>
+                    </div>
+                    <div class="wine-info">
+                        <div class="name">${wine.name_en}</div>
+                        <div class="producer">${wine.producer}</div>
+                    </div>
+                    <div class="wine-score">${wine.score}</div>
+                </div>
+            `).join('');
+        }
+
+        // 切换选择
+        function toggleWine(id) {
+            const index = selectedWines.indexOf(id);
+            if (index > -1) {
+                selectedWines.splice(index, 1);
+            } else {
+                selectedWines.push(id);
+            }
+            renderWineList();
+        }
+
+        // 全选
+        function selectAll() {
+            selectedWines = wines.map(w => w.id);
+            renderWineList();
+        }
+
+        // 清空
+        function clearSelection() {
+            selectedWines = [];
+            renderWineList();
+            document.getElementById('slidesContainer').innerHTML = `
+                <div class="empty-state" id="emptyState">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/>
+                        <line x1="12" y1="17" x2="12" y2="21"/>
+                    </svg>
+                    <p>选择酒款后点击"生成预览"</p>
+                </div>
+            `;
+            document.getElementById('downloadBtn').disabled = true;
+            document.getElementById('slideCounter').textContent = '0 页';
+            generatedSlides = [];
+        }
+
+        // 加载JSON
+        function loadJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    // 支持两种格式
+                    if (data.wines) {
+                        wines = data.wines.map((w, i) => ({
+                            id: i + 1,
+                            name_cn: w.basic_info?.name_cn || w.name_cn,
+                            name_en: w.basic_info?.name_original || w.name_en,
+                            producer: w.basic_info?.producer || w.producer,
+                            producer_cn: w.basic_info?.producer_cn || w.producer_cn,
+                            classification: w.classification || 'Bourgogne',
+                            score: w.score || 90,
+                            abv: (w.basic_info?.alcohol || w.abv || 13) + '%',
+                            grape: w.basic_info?.grape_varieties?.[0]?.name || w.grape || 'Unknown',
+                            vintage: w.basic_info?.vintage || w.vintage || 'NV',
+                            aging: w.aging || '5-8年',
+                            tasting: w.tasting_notes ? {
+                                appearance: w.tasting_notes.visual?.color || '',
+                                nose: w.tasting_notes.nose?.aroma_profile?.fruits?.join('、') || '',
+                                palate: w.tasting_notes.palate?.structure || '',
+                                finish: w.tasting_notes.finish?.length || ''
+                            } : (w.tasting || {}),
+                            pairing: w.pairing || []
+                        }));
+                    } else if (Array.isArray(data)) {
+                        wines = data.map((w, i) => ({ id: i + 1, ...w }));
+                    }
+                    selectedWines = [];
+                    renderWineList();
+                    alert(`已加载 ${wines.length} 款酒`);
+                } catch (err) {
+                    alert('JSON解析失败: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // 生成预览
+        function generatePreview() {
+            if (selectedWines.length === 0) {
+                alert('请先选择酒款');
+                return;
+            }
+
+            const theme = document.getElementById('themeSelect').value;
+            const coverTitle = document.getElementById('coverTitle').value;
+            const selected = wines.filter(w => selectedWines.includes(w.id));
+
+            generatedSlides = [];
+
+            if (currentMode === 'ppt') {
+                // PPT模式
+                generatedSlides.push({
+                    type: 'cover',
+                    html: generateCoverSlide(coverTitle, selected.length, theme)
+                });
+
+                selected.forEach((wine, i) => {
+                    generatedSlides.push({
+                        type: 'wine',
+                        html: generateWineSlide(wine, i + 2, generatedSlides.length + 2, theme)
+                    });
+                });
+
+                generatedSlides.push({
+                    type: 'index',
+                    html: generateIndexSlide(selected, generatedSlides.length + 1, theme)
+                });
+
+                // 更新页码
+                const totalPages = generatedSlides.length;
+                generatedSlides[0].html = generateCoverSlide(coverTitle, selected.length, theme, totalPages);
+                generatedSlides.forEach((slide, i) => {
+                    if (slide.type === 'wine') {
+                        const wine = selected[generatedSlides.slice(0, i).filter(s => s.type === 'wine').length];
+                        slide.html = generateWineSlide(wine, i + 1, totalPages, theme);
+                    }
+                });
+                generatedSlides[generatedSlides.length - 1].html = generateIndexSlide(selected, totalPages, theme);
+
+            } else if (currentMode === 'square') {
+                // 方形海报模式
+                selected.forEach(wine => {
+                    generatedSlides.push({
+                        type: 'square',
+                        html: generateSquarePoster(wine, theme)
+                    });
+                });
+
+            } else if (currentMode === 'portrait') {
+                // 竖版海报模式
+                selected.forEach(wine => {
+                    generatedSlides.push({
+                        type: 'portrait',
+                        html: generatePortraitPoster(wine, theme)
+                    });
+                });
+            }
+
+            // 渲染
+            const container = document.getElementById('slidesContainer');
+            container.innerHTML = generatedSlides.map(s => s.html).join('');
+            document.getElementById('slideCounter').textContent = `${generatedSlides.length} 张`;
+            document.getElementById('downloadBtn').disabled = false;
+        }
+
+        // 生成封面
+        function generateCoverSlide(title, count, theme, total = 3) {
+            const lightClass = theme === 'light' ? 'light' : '';
+            return `
+                <div class="slide cover ${lightClass}">
+                    <div class="texture"></div>
+                    <div class="corner tl"></div>
+                    <div class="corner tr"></div>
+                    <div class="corner bl"></div>
+                    <div class="corner br"></div>
+                    <div class="slide-content">
+                        <div class="brand-badge">Burgundy & Champagne</div>
+                        <div class="main-title">${title}</div>
+                        <div class="sub-title">${count} 款精选葡萄酒</div>
+                        <div class="decorative-line"></div>
+                        <div class="tagline">Bourgogne Fine Wines · 勃艮第美酒坊</div>
+                    </div>
+                    <div class="page-num">1 / ${total}</div>
+                </div>
+            `;
+        }
+
+        // 生成酒款页
+        function generateWineSlide(wine, page, total, theme) {
+            const lightClass = theme === 'light' ? 'light' : '';
+            const imgSrc = wine.image || "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg\" width=\"100\" height=\"300\" viewBox=\"0 0 100 300\"><rect fill=\"#333\" width=\"100\" height=\"300\" rx=\"5\"/><text x=\"50\" y=\"150\" fill=\"#666\" text-anchor=\"middle\" font-size=\"10\" font-family=\"sans-serif\">点击上传图片</text></svg>');
+            return `
+                <div class="slide wine ${lightClass}">
+                    <div class="texture"></div>
+                    <div class="corner tl"></div>
+                    <div class="corner tr"></div>
+                    <div class="corner bl"></div>
+                    <div class="corner br"></div>
+                    <div class="slide-content">
+                        <div class="wine-image-section">
+                            <img class="wine-image"
+                                 src="${imgSrc}"
+                                 alt="${wine.name_en}"
+                                 onclick="uploadImage(this)"
+                                 style="cursor:pointer;${wine.image ? '' : 'opacity:0.5'}">
+                        </div>
+                        <div class="wine-details">
+                            <div class="classification">${wine.classification}</div>
+                            <div class="wine-name-en">${wine.name_en}</div>
+                            <div class="wine-name-cn">${wine.name_cn}</div>
+                            <div class="specs">
+                                <div class="spec">
+                                    <div class="spec-value">${wine.score}</div>
+                                    <div class="spec-label">评分</div>
+                                </div>
+                                <div class="spec">
+                                    <div class="spec-value">${wine.abv}</div>
+                                    <div class="spec-label">酒精度</div>
+                                </div>
+                                <div class="spec">
+                                    <div class="spec-value">${wine.grape}</div>
+                                    <div class="spec-label">品种</div>
+                                </div>
+                                <div class="spec">
+                                    <div class="spec-value">${wine.aging}</div>
+                                    <div class="spec-label">陈年</div>
+                                </div>
+                            </div>
+                            <div class="tasting-notes">
+                                <div class="tasting-title">Tasting Notes</div>
+                                <div class="tasting-grid">
+                                    <div class="tasting-item">
+                                        <span class="tasting-label">外观</span>
+                                        <span class="tasting-value">${wine.tasting?.appearance || '-'}</span>
+                                    </div>
+                                    <div class="tasting-item">
+                                        <span class="tasting-label">香气</span>
+                                        <span class="tasting-value">${wine.tasting?.nose || '-'}</span>
+                                    </div>
+                                    <div class="tasting-item">
+                                        <span class="tasting-label">口感</span>
+                                        <span class="tasting-value">${wine.tasting?.palate || '-'}</span>
+                                    </div>
+                                    <div class="tasting-item">
+                                        <span class="tasting-label">余味</span>
+                                        <span class="tasting-value">${wine.tasting?.finish || '-'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pairing">
+                                <span class="pairing-label">配餐</span>
+                                <div class="pairing-tags">
+                                    ${(wine.pairing || []).map(p => `<span class="pairing-tag">${p}</span>`).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="page-num">${page} / ${total}</div>
+                </div>
+            `;
+        }
+
+        // 生成索引页
+        function generateIndexSlide(wines, total, theme) {
+            const lightClass = theme === 'light' ? 'light' : '';
+            return `
+                <div class="slide index ${lightClass}">
+                    <div class="texture"></div>
+                    <div class="corner tl"></div>
+                    <div class="corner tr"></div>
+                    <div class="corner bl"></div>
+                    <div class="corner br"></div>
+                    <div class="slide-content">
+                        <div class="index-header">
+                            <div class="index-title">Collection Overview</div>
+                            <div class="index-subtitle">${wines.length} Selected Wines</div>
+                        </div>
+                        <div class="index-grid">
+                            ${wines.map(wine => `
+                                <div class="index-card">
+                                    <img class="index-card-img"
+                                         src="${wine.image || "data:image/svg+xml," + encodeURIComponent('<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"100\" viewBox=\"0 0 40 100\"><rect fill=\"#444\" width=\"40\" height=\"100\" rx=\"3\"/></svg>')}"
+                                         alt="${wine.name_en}">
+                                    <div class="index-card-name">${wine.name_en}</div>
+                                    <div class="index-card-class">${wine.classification}</div>
+                                    <div class="index-card-score">${wine.score}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="page-num">${total} / ${total}</div>
+                </div>
+            `;
+        }
+
+        // 生成方形海报 (参考 wine_poster_light)
+        function generateSquarePoster(wine, theme) {
+            const lightClass = theme === 'light' ? 'light' : '';
+            const terroir = wine.terroir || `${wine.producer_cn}，${wine.classification}级别。传统工艺酿造，展现风土特色。`;
+            const servingTemp = wine.serving_temp || '14-16°C';
+            const decanter = wine.decanter || '醒酒30分钟';
+            const aging = wine.aging || '5-8年';
+            const imgSrc = wine.image || "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="300" viewBox="0 0 100 300"><rect fill="#333" width="100" height="300" rx="5"/><text x="50" y="150" fill="#666" text-anchor="middle" font-size="10" font-family="sans-serif">点击上传图片</text></svg>');
+
+            return `
+                <div class="poster-square ${lightClass}">
+                    <div class="poster-border-frame"></div>
+                    <div class="poster-top-accent"></div>
+                    <div class="poster-corner-badge">${wine.classification}</div>
+                    <div class="poster-main-content">
+                        <div class="poster-header">
+                            <div class="poster-producer-name">${wine.producer}</div>
+                            <div class="poster-wine-name">${wine.name_en}</div>
+                            <div class="poster-wine-name-cn">${wine.name_cn}</div>
+                        </div>
+                        <div class="poster-body">
+                            <div class="poster-bottle-section">
+                                <div class="poster-bottle-glow"></div>
+                                <img class="poster-image"
+                                     src="${imgSrc}"
+                                     alt="${wine.name_en}"
+                                     onclick="uploadImage(this)"
+                                     style="cursor:pointer;${wine.image ? '' : 'opacity:0.5'}">
+                            </div>
+                            <div class="poster-info-section">
+                                <div class="poster-score-row">
+                                    <div class="poster-score-main">
+                                        <span class="poster-score-number">${wine.score}</span>
+                                        <span class="poster-score-label">pts</span>
+                                    </div>
+                                    <div class="poster-score-details">
+                                        <div class="poster-detail-item">
+                                            <div class="poster-detail-value">${wine.abv}</div>
+                                            <div class="poster-detail-label">ABV</div>
+                                        </div>
+                                        <div class="poster-detail-item">
+                                            <div class="poster-detail-value">${wine.grape}</div>
+                                            <div class="poster-detail-label">Varietal</div>
+                                        </div>
+                                        <div class="poster-detail-item">
+                                            <div class="poster-detail-value">${wine.vintage}</div>
+                                            <div class="poster-detail-label">Vintage</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="poster-terroir-box">
+                                    <div class="poster-terroir-title">Terroir 风土</div>
+                                    <div class="poster-terroir-text">${terroir}</div>
+                                </div>
+                                <div class="poster-tasting-block">
+                                    <div class="poster-tasting-row">
+                                        <span class="poster-tasting-label">外观</span>
+                                        <span class="poster-tasting-value">${wine.tasting?.appearance || '明亮的宝石红色'}</span>
+                                    </div>
+                                    <div class="poster-tasting-row">
+                                        <span class="poster-tasting-label">香气</span>
+                                        <span class="poster-tasting-value">${wine.tasting?.nose || '红樱桃、覆盆子、紫罗兰'}</span>
+                                    </div>
+                                    <div class="poster-tasting-row">
+                                        <span class="poster-tasting-label">口感</span>
+                                        <span class="poster-tasting-value">${wine.tasting?.palate || '优雅精致，丝滑单宁'}</span>
+                                    </div>
+                                    <div class="poster-tasting-row">
+                                        <span class="poster-tasting-label">余味</span>
+                                        <span class="poster-tasting-value">${wine.tasting?.finish || '悠长持久，矿物感'}</span>
+                                    </div>
+                                </div>
+                                <div class="poster-extra-info">
+                                    <div class="poster-pairing-block">
+                                        <div class="poster-extra-title">Food Pairing</div>
+                                        <div class="poster-pairing-list">
+                                            ${(wine.pairing || ['烤鸭', '羊排', '蘑菇']).map(p => `<span class="poster-pairing-tag">${p}</span>`).join('')}
+                                        </div>
+                                    </div>
+                                    <div class="poster-serving-block">
+                                        <div class="poster-serving-item">
+                                            <div class="poster-serving-value">${servingTemp}</div>
+                                            <div class="poster-serving-label">侍酒</div>
+                                        </div>
+                                        <div class="poster-serving-item">
+                                            <div class="poster-serving-value">${decanter}</div>
+                                            <div class="poster-serving-label">醒酒</div>
+                                        </div>
+                                        <div class="poster-serving-item">
+                                            <div class="poster-serving-value">${aging}</div>
+                                            <div class="poster-serving-label">陈年</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="poster-bottom-accent"></div>
+                </div>
+            `;
+        }
+
+        // 生成竖版海报 9:16
+        function generatePortraitPoster(wine, theme) {
+            const lightClass = theme === 'light' ? 'light' : '';
+            const terroir = wine.terroir || `${wine.producer_cn}，${wine.classification}级别。传统工艺酿造，展现风土特色。`;
+            const servingTemp = wine.serving_temp || '14-16°C';
+            const decanter = wine.decanter || '醒酒30分钟';
+            const aging = wine.aging || '5-8年';
+            const imgSrc = wine.image || "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg\" width=\"100\" height=\"300\" viewBox=\"0 0 100 300\"><rect fill=\"#333\" width=\"100\" height=\"300\" rx="5\"/><text x=\"50" y=\"150" fill=\"#666" text-anchor="middle\" font-size=\"10\" font-family=\"sans-serif\">点击上传图片</text></svg>');
+
+            return `
+                <div class="poster-portrait ${lightClass}">
+                    <div class="poster-border-frame"></div>
+                    <div class="poster-top-accent"></div>
+                    <div class="poster-corner-badge">${wine.classification}</div>
+                    <div class="poster-main-content">
+                        <div class="poster-header">
+                            <div class="poster-producer-name">${wine.producer}</div>
+                            <div class="poster-wine-name">${wine.name_en}</div>
+                            <div class="poster-wine-name-cn">${wine.name_cn}</div>
+                        </div>
+                        <div class="poster-bottle-section">
+                            <div class="poster-bottle-glow"></div>
+                            <img class="poster-image"
+                                 src="${imgSrc}"
+                                 alt="${wine.name_en}"
+                                 onclick="uploadImage(this)"
+                                 style="cursor:pointer;${wine.image ? '' : 'opacity:0.5'}">
+                        </div>
+                        <div class="poster-score-row">
+                            <div class="poster-score-main">
+                                <span class="poster-score-number">${wine.score}</span>
+                                <span class="poster-score-label">pts</span>
+                            </div>
+                            <div class="poster-score-details">
+                                <div class="poster-detail-item">
+                                    <div class="poster-detail-value">${wine.abv}</div>
+                                    <div class="poster-detail-label">ABV</div>
+                                </div>
+                                <div class="poster-detail-item">
+                                    <div class="poster-detail-value">${wine.grape}</div>
+                                    <div class="poster-detail-label">品种</div>
+                                </div>
+                                <div class="poster-detail-item">
+                                    <div class="poster-detail-value">${wine.vintage}</div>
+                                    <div class="poster-detail-label">年份</div>
+                                </div>
+                                <div class="poster-detail-item">
+                                    <div class="poster-detail-value">${aging}</div>
+                                    <div class="poster-detail-label">陈年</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="poster-info-section">
+                            <div class="poster-terroir-box">
+                                <div class="poster-terroir-title">Terroir 风土</div>
+                                <div class="poster-terroir-text">${terroir}</div>
+                            </div>
+                            <div class="poster-tasting-block">
+                                <div class="poster-tasting-row">
+                                    <span class="poster-tasting-label">外观</span>
+                                    <span class="poster-tasting-value">${wine.tasting?.appearance || '明亮的宝石红色'}</span>
+                                </div>
+                                <div class="poster-tasting-row">
+                                    <span class="poster-tasting-label">香气</span>
+                                    <span class="poster-tasting-value">${wine.tasting?.nose || '红樱桃、覆盆子、紫罗兰'}</span>
+                                </div>
+                                <div class="poster-tasting-row">
+                                    <span class="poster-tasting-label">口感</span>
+                                    <span class="poster-tasting-value">${wine.tasting?.palate || '优雅精致，丝滑单宁'}</span>
+                                </div>
+                                <div class="poster-tasting-row">
+                                    <span class="poster-tasting-label">余味</span>
+                                    <span class="poster-tasting-value">${wine.tasting?.finish || '悠长持久，矿物感'}</span>
+                                </div>
+                            </div>
+                            <div class="poster-extra-info">
+                                <div class="poster-pairing-block">
+                                    <div class="poster-extra-title">Food Pairing</div>
+                                    <div class="poster-pairing-list">
+                                        ${(wine.pairing || ['烤鸭', '羊排', '蘑菇']).map(p => `<span class="poster-pairing-tag">${p}</span>`).join('')}
+                                    </div>
+                                </div>
+                                <div class="poster-serving-row">
+                                    <div class="poster-serving-item">
+                                        <div class="poster-serving-value">${servingTemp}</div>
+                                        <div class="poster-serving-label">侍酒温度</div>
+                                    </div>
+                                    <div class="poster-serving-item">
+                                        <div class="poster-serving-value">${decanter}</div>
+                                        <div class="poster-serving-label">醒酒建议</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="poster-brand-footer">Bourgogne Fine Wines</div>
+                    </div>
+                    <div class="poster-bottom-accent"></div>
+                </div>
+            `;
+        }
+
+        // 上传图片
+        function uploadImage(imgElement) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        imgElement.src = ev.target.result;
+                        imgElement.style.opacity = '1';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+            input.click();
+        }
+
+        // 生成酒单
+        async function generateWineCard() {
+            if (selectedWines.length === 0) {
+                alert('请先选择酒款');
+                return;
+            }
+
+            const loading = document.getElementById('loadingOverlay');
+            const loadingText = document.getElementById('loadingText');
+            loadingText.textContent = '正在生成酒单...';
+            loading.classList.add('active');
+
+            try {
+                const selected = wines.filter(w => selectedWines.includes(w.id));
+                const theme = document.getElementById('themeSelect').value;
+                const isLight = theme === 'light';
+
+                // 按红/白酒分组
+                const redWines = selected.filter(w => w.grape && w.grape.toLowerCase().includes('pinot'));
+                const whiteWines = selected.filter(w => w.grape && w.grape.toLowerCase().includes('chardonnay'));
+                const otherWines = selected.filter(w => !redWines.includes(w) && !whiteWines.includes(w));
+
+                generatedSlides = [];
+
+                // 封面页
+                generatedSlides.push({
+                    type: 'winecard-cover',
+                    html: generateWineListCover(selected.length, isLight)
+                });
+
+                // 红酒页
+                if (redWines.length > 0) {
+                    const pages = Math.ceil(redWines.length / 6);
+                    for (let i = 0; i < pages; i++) {
+                        const pageWines = redWines.slice(i * 6, (i + 1) * 6);
+                        generatedSlides.push({
+                            type: 'winecard-red',
+                            html: generateWineListPage(pageWines, '红葡萄酒', 'Red Wines', i + 1, pages, isLight)
+                        });
+                    }
+                }
+
+                // 白酒页
+                if (whiteWines.length > 0) {
+                    const pages = Math.ceil(whiteWines.length / 6);
+                    for (let i = 0; i < pages; i++) {
+                        const pageWines = whiteWines.slice(i * 6, (i + 1) * 6);
+                        generatedSlides.push({
+                            type: 'winecard-white',
+                            html: generateWineListPage(pageWines, '白葡萄酒', 'White Wines', i + 1, pages, isLight)
+                        });
+                    }
+                }
+
+                // 其他酒页
+                if (otherWines.length > 0) {
+                    const pages = Math.ceil(otherWines.length / 6);
+                    for (let i = 0; i < pages; i++) {
+                        const pageWines = otherWines.slice(i * 6, (i + 1) * 6);
+                        generatedSlides.push({
+                            type: 'winecard-other',
+                            html: generateWineListPage(pageWines, '起泡酒 & 其他', 'Sparkling & Others', i + 1, pages, isLight)
+                        });
+                    }
+                }
+
+                const container = document.getElementById('slidesContainer');
+                container.innerHTML = generatedSlides.map(s => s.html).join('');
+                document.querySelector('.preview-title').textContent = '酒单预览';
+                document.getElementById('slideCounter').textContent = generatedSlides.length + ' 页';
+                document.getElementById('downloadBtn').disabled = false;
+                currentMode = 'winecard';
+                loading.classList.remove('active');
+
+            } catch (error) {
+                console.error('Wine card generation failed:', error);
+                loading.classList.remove('active');
+                alert('酒单生成失败: ' + error.message);
+            }
+        }
+
+        // 酒单封面
+        function generateWineListCover(count, isLight) {
+            const bg = isLight ? '#faf8f5' : '#1a1412';
+            const textColor = isLight ? '#2c2416' : '#f5f0e8';
+            const accentColor = '#d4af7d';
+            const subColor = isLight ? '#8b7355' : 'rgba(212, 175, 125, 0.7)';
+
+            return '<div class="slide" style="width: 100%; aspect-ratio: 16/9; background: ' + bg + '; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;">' +
+                '<div class="texture"></div>' +
+                '<div style="font-family: \'Cormorant Garamond\', serif; font-size: 14px; color: ' + subColor + '; letter-spacing: 8px; text-transform: uppercase; margin-bottom: 30px;">Wine List</div>' +
+                '<div style="font-family: \'Noto Serif SC\', serif; font-size: 56px; color: ' + textColor + '; font-weight: 600; letter-spacing: 12px; margin-bottom: 20px;">酒 单</div>' +
+                '<div style="width: 80px; height: 2px; background: ' + accentColor + '; margin-bottom: 30px;"></div>' +
+                '<div style="font-size: 16px; color: ' + subColor + '; letter-spacing: 2px;">精选 ' + count + ' 款葡萄酒</div>' +
+                '<div style="position: absolute; bottom: 40px; font-size: 12px; color: ' + subColor + '; letter-spacing: 3px;">Bourgogne Fine Wines · 勃艮第美酒坊</div>' +
+            '</div>';
+        }
+
+        // 酒单内页
+        function generateWineListPage(wines, titleCn, titleEn, pageNum, totalPages, isLight) {
+            const bg = isLight ? '#faf8f5' : '#1a1412';
+            const textColor = isLight ? '#2c2416' : '#f5f0e8';
+            const accentColor = '#d4af7d';
+            const subColor = isLight ? '#8b7355' : 'rgba(212, 175, 125, 0.7)';
+            const borderColor = isLight ? 'rgba(139, 115, 85, 0.15)' : 'rgba(212, 175, 125, 0.1)';
+
+            let wineRows = '';
+            wines.forEach((wine, i) => {
+                const price = wine.price || (wine.score * 100 + Math.floor(Math.random() * 200));
+                wineRows += '<div style="display: flex; padding: 18px 0; border-bottom: 1px solid ' + borderColor + ';">' +
+                    // 序号
+                    '<div style="flex: 0 0 30px; font-family: \'Cormorant Garamond\', serif; font-size: 14px; color: ' + subColor + ';">' + String(i + 1).padStart(2, '0') + '</div>' +
+                    // 酒名区
+                    '<div style="flex: 1; padding-right: 20px;">' +
+                        '<div style="font-family: \'Cormorant Garamond\', serif; font-size: 18px; color: ' + textColor + '; font-weight: 500; margin-bottom: 4px;">' + wine.name_en + '</div>' +
+                        '<div style="font-size: 13px; color: ' + subColor + ';">' + wine.name_cn + '</div>' +
+                        '<div style="font-size: 11px; color: ' + subColor + '; margin-top: 6px; letter-spacing: 1px;">' + wine.producer + ' · ' + wine.classification + '</div>' +
+                    '</div>' +
+                    // 年份
+                    '<div style="flex: 0 0 60px; text-align: center; padding-top: 8px;">' +
+                        '<div style="font-family: \'Cormorant Garamond\', serif; font-size: 20px; color: ' + textColor + '; font-weight: 600;">' + wine.vintage + '</div>' +
+                    '</div>' +
+                    // 评分
+                    '<div style="flex: 0 0 50px; text-align: center; padding-top: 8px;">' +
+                        '<div style="font-family: \'Cormorant Garamond\', serif; font-size: 16px; color: ' + accentColor + ';">' + wine.score + '</div>' +
+                    '</div>' +
+                    // 价格
+                    '<div style="flex: 0 0 80px; text-align: right; padding-top: 8px;">' +
+                        '<div style="font-family: \'Cormorant Garamond\', serif; font-size: 20px; color: ' + textColor + '; font-weight: 600;">¥' + price.toLocaleString() + '</div>' +
+                    '</div>' +
+                '</div>';
+            });
+
+            return '<div class="slide" style="width: 100%; aspect-ratio: 16/9; background: ' + bg + '; position: relative; overflow: hidden; padding: 50px 70px;">' +
+                '<div class="texture"></div>' +
+                // 页头
+                '<div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 2px solid ' + accentColor + ';">' +
+                    '<div>' +
+                        '<div style="font-family: \'Noto Serif SC\', serif; font-size: 24px; color: ' + textColor + '; font-weight: 600;">' + titleCn + '</div>' +
+                        '<div style="font-family: \'Cormorant Garamond\', serif; font-size: 12px; color: ' + subColor + '; letter-spacing: 3px; text-transform: uppercase; margin-top: 4px;">' + titleEn + '</div>' +
+                    '</div>' +
+                    '<div style="font-size: 11px; color: ' + subColor + '; letter-spacing: 1px;">' + pageNum + ' / ' + totalPages + '</div>' +
+                '</div>' +
+                // 表头
+                '<div style="display: flex; padding: 8px 0; margin-bottom: 5px; border-bottom: 1px solid ' + borderColor + ';">' +
+                    '<div style="flex: 0 0 30px; font-size: 10px; color: ' + subColor + '; letter-spacing: 1px;">No.</div>' +
+                    '<div style="flex: 1; font-size: 10px; color: ' + subColor + '; letter-spacing: 1px;">酒款信息</div>' +
+                    '<div style="flex: 0 0 60px; text-align: center; font-size: 10px; color: ' + subColor + '; letter-spacing: 1px;">年份</div>' +
+                    '<div style="flex: 0 0 50px; text-align: center; font-size: 10px; color: ' + subColor + '; letter-spacing: 1px;">评分</div>' +
+                    '<div style="flex: 0 0 80px; text-align: right; font-size: 10px; color: ' + subColor + '; letter-spacing: 1px;">价格</div>' +
+                '</div>' +
+                // 酒款列表
+                '<div>' + wineRows + '</div>' +
+                // 页脚
+                '<div style="position: absolute; bottom: 30px; left: 70px; right: 70px; display: flex; justify-content: space-between; font-size: 10px; color: ' + subColor + ';">' +
+                    '<span>Bourgogne Fine Wines · 勃艮第美酒坊</span>' +
+                    '<span>评分来源: Wine Advocate / Wine Spectator</span>' +
+                '</div>' +
+            '</div>';
+        }
+
+        // 下载输出
+        async function downloadOutput() {
+            if (generatedSlides.length === 0) {
+                alert('请先生成预览');
+                return;
+            }
+
+            if (currentMode === 'ppt' || currentMode === 'winecard') {
+                await downloadPDF();
+            } else {
+                await downloadPosters();
+            }
+        }
+
+        // 下载PDF (PPT模式)
+        async function downloadPDF() {
+            const loading = document.getElementById('loadingOverlay');
+            const loadingText = document.getElementById('loadingText');
+            loadingText.textContent = '正在生成PDF...';
+            loading.classList.add('active');
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const slides = document.querySelectorAll('.slide');
+
+                // 使用16:9比例，以毫米为单位 (约508x285.75mm = 20x11.25英寸)
+                const pageWidth = 508;
+                const pageHeight = 285.75;
+
+                const pdf = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: [pageWidth, pageHeight]
+                });
+
+                // 预加载所有图片
+                for (let i = 0; i < slides.length; i++) {
+                    loadingText.textContent = `正在加载图片 ${i + 1}/${slides.length}...`;
+                    await preloadImages(slides[i]);
+                }
+
+                for (let i = 0; i < slides.length; i++) {
+                    loadingText.textContent = `正在处理第 ${i + 1}/${slides.length} 页...`;
+
+                    const canvas = await html2canvas(slides[i], {
+                        scale: 2,
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: '#1a1412',
+                        logging: false
+                    });
+
+                    if (i > 0) {
+                        pdf.addPage([pageWidth, pageHeight], 'landscape');
+                    }
+
+                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                    pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight);
+                }
+
+                const title = document.getElementById('coverTitle').value || '葡萄酒目录';
+                pdf.save(`${title}_${new Date().toISOString().slice(0,10)}.pdf`);
+
+                loading.classList.remove('active');
+                alert('PDF下载完成!');
+
+            } catch (error) {
+                console.error('PDF generation failed:', error);
+                loading.classList.remove('active');
+                alert('PDF生成失败: ' + error.message);
+            }
+        }
+
+        // 批量下载海报 (PNG)
+        async function downloadPosters() {
+            const loading = document.getElementById('loadingOverlay');
+            const loadingText = document.getElementById('loadingText');
+            loadingText.textContent = '正在生成海报...';
+            loading.classList.add('active');
+
+            try {
+                const selector = currentMode === 'square' ? '.poster-square' : '.poster-portrait';
+                const posters = document.querySelectorAll(selector);
+                // 方形海报 1600x1600，竖版海报 1080x1920 (9:16)
+                const scale = currentMode === 'square' ? 1600 / posters[0].offsetWidth : 1080 / posters[0].offsetWidth;
+
+                // 创建zip下载（使用简单的逐个下载）
+                for (let i = 0; i < posters.length; i++) {
+                    loadingText.textContent = `正在处理第 ${i + 1}/${posters.length} 张...`;
+
+                    const canvas = await html2canvas(posters[i], {
+                        scale: scale,
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: null
+                    });
+
+                    const link = document.createElement('a');
+                    const wine = wines.filter(w => selectedWines.includes(w.id))[i];
+                    link.download = `${wine.name_en.replace(/[^a-zA-Z0-9]/g, '_')}_${currentMode}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+
+                    // 稍微延迟避免浏览器阻止多次下载
+                    if (i < posters.length - 1) {
+                        await new Promise(r => setTimeout(r, 500));
+                    }
+                }
+
+                loading.classList.remove('active');
+                alert(`${posters.length} 张海报下载完成！`);
+
+            } catch (error) {
+                console.error('Poster generation failed:', error);
+                loading.classList.remove('active');
+                alert('海报生成失败: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
