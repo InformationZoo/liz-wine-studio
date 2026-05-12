@@ -1,0 +1,34 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# TLS/certificate material
+ssl/
+*.key
+*.pem
+*.pfx
+*.jks
+keystorePass.txt
+
+# Dependencies and generated output
+node_modules/
+dist/
+build/
+coverage/
+logs/
+*.log
+
+# Runtime databases
+server/db/*.db
+server/db/*.sqlite
+server/db/*.sqlite3
+server/db/*.db-wal
+server/db/*.db-shm
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*
+*.tmp
